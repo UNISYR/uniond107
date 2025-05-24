@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>메트로놈</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
+    
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: linear-gradient(135deg, #3a1c71, #d76d77, #ffaf7b);
+      background-size: 400% 400%;
+      animation: gradient 15s ease infinite;
+      min-height: 100vh;
+      margin: 0;
+      padding: 16px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      touch-action: manipulation;
+    }
+    
+    @keyframes gradient {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    
+    .metronome-container {
+      width: 100%;
+      max-width: 450px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    }
+    
+    .metronome-arm {
+      height: 140px;
+      width: 4px;
+      background-color: #333;
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform-origin: bottom center;
+      transform: rotate(0deg);
+      z-index: 10;
+    }
+    
+    .metronome-weight {
+      width: 20px;
+      height: 20px;
+      background-color: #ff4757;
+      border-radius: 50%;
+      position: absolute;
+      top: 20px;
+      left: -8px;
+    }
+    
+    .metronome-base {
+      width: 160px;
+      height: 30px;
+      background-color: #2f3542;
+      border-radius: 10px 10px 0 0;
+      position: relative;
+      z-index: 5;
+    }
+    
+    .beat-indicator {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin: 0 3px;
+      background-color: rgba(255, 255, 255, 0.3);
+      transition: background-color 0.1s ease;
+    }
+    
+    .beat-indicator.active {
+      background-color: #ff4757;
+      box-shadow: 0 0 10px #ff4757;
+    }
+    
+    .beat-indicator.accent {
+      border: 2px solid rgba(255, 255, 255, 0.7);
+    }
+    
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 8px;
+      border-radius: 4px;
+      background: linear-gradient(to right, #ff4757 0%, #ff4757 50%, #dfe4ea 50%, #dfe4ea 100%);
+      outline: none;
+      width: 100%;
+    }
+    
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+      cursor: pointer;
+    }
+    
+    input[type="range"]::-moz-range-thumb {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+      cursor: pointer;
+      border: none;
+    }
+    
+    input[type="number"] {
+      -moz-appearance: textfield;
+      appearance: textfield;
+    }
+    
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      appearance: none;
+      margin: 0;
+    }
+    
+    .sound-option, .beat-option {
+      cursor: pointer;
+      padding: 8px 12px;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    
+    .sound-option.active, .beat-option.active {
+      background-color: rgba(255, 255, 255, 0.3);
+      box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+    }
+    
+    select {
+      color: #000 !important;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+      background-size: 16px;
+      padding-right: 28px !important;
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    .beat-indicators-container {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      max-width: 100%;
+      gap: 4px;
+      padding: 8px 0;
+    }
+    
+    .flash-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: white;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 9999;
+      transition: opacity 0.05s ease-out;
+    }
+    
+    .flash-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px;
+      border-radius: 8px;
+      background-color: rgba(255, 255, 255, 0.2);
+      transition: all 0.2s ease;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    
+    .flash-button.active {
+      background-color: rgba(255, 255, 255, 0.4);
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
+    }
+    
+    .flash-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background-color: white;
+      transition: all 0.2s ease;
+    }
+    
+    .flash-button.active .flash-indicator {
+      background-color: #ff4757;
+      box-shadow: 0 0 10px #ff4757;
+    }
+    
+    button, .button {
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    
+    @media (max-width: 480px) {
+      .metronome-container {
+        padding: 16px;
+      }
+      
+      .metronome-arm {
+        height: 120px;
+      }
+      
+      .metronome-base {
+        width: 140px;
+        height: 25px;
+      }
+      
+      .beat-indicator {
+        width: 8px;
+        height: 8px;
+        margin: 0 2px;
+      }
+      
+      h1 {
+        font-size: 1.5rem !important;
+      }
+      
+      .sound-option, .beat-option {
+        padding: 6px 8px;
+      }
+    }
+  </style>
+</head>
+<body class="text-white">
+  <div class="flash-overlay" id="flashOverlay"></div>
+  
+  <div class="metronome-container">
+    <h1 class="text-2xl md:text-3xl font-bold text-center mb-4 md:mb-6">메트로놈</h1>
+    
+    <div class="flex justify-center mb-6 md:mb-8 relative h-[180px]">
+      <div class="metronome-base"></div>
+      <div class="metronome-arm" id="arm">
+        <div class="metronome-weight"></div>
+      </div>
+    </div>
+    
+    <div class="beat-indicators-container mb-4" id="beatIndicators">
+      <!-- Beat indicators will be added here -->
+    </div>
+    
+    <div class="mb-5 md:mb-6">
+      <div class="flex justify-between mb-2">
+        <label for="bpm" class="font-medium">BPM</label>
+        <div class="flex items-center">
+          <input 
+            type="number" 
+            id="bpmInput" 
+            min="1" 
+            max="400" 
+            value="120" 
+            class="w-16 bg-white bg-opacity-80 backdrop-blur-sm border border-white border-opacity-30 rounded-md p-1 text-black text-center font-bold"
+          >
+        </div>
+      </div>
+      <input type="range" id="bpm" min="1" max="400" value="120" class="w-full mb-2">
+      <div class="flex justify-between text-sm opacity-70">
+        <span>1</span>
+        <span>400</span>
+      </div>
+    </div>
+    
+    <div class="mb-5 md:mb-6">
+      <div class="flex justify-between mb-2">
+        <div class="flex items-center">
+          <label class="font-medium">박자</label>
+          <span id="beatsValue" class="font-bold ml-2">4/4</span>
+        </div>
+        <div class="flex items-center">
+          <label class="font-medium mr-2">비트</label>
+          <span id="beatTypeValue" class="font-bold">4비트</span>
+        </div>
+      </div>
+      
+      <div class="flex mb-4 border-b border-white border-opacity-20">
+        <button id="timeSignatureTab" class="py-2 px-3 md:px-4 font-medium opacity-70 hover:opacity-100 transition-opacity border-b-2 border-white">박자 설정</button>
+        <button id="beatTypeTab" class="py-2 px-3 md:px-4 font-medium opacity-70 hover:opacity-100 transition-opacity">비트 설정</button>
+      </div>
+      
+      <div id="timeSignatureContent" class="tab-content active">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="text-sm opacity-70">박자 수</label>
+            <select id="beatsPerMeasure" class="w-full bg-white bg-opacity-80 backdrop-blur-sm border border-white border-opacity-30 rounded-md p-2 text-black">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4" selected>4</option>
+              <option value="5">5</option>
+              <option value="6">6</option>
+              <option value="7">7</option>
+              <option value="8">8</option>
+              <option value="9">9</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-sm opacity-70">박자 단위</label>
+            <select id="beatUnit" class="w-full bg-white bg-opacity-80 backdrop-blur-sm border border-white border-opacity-30 rounded-md p-2 text-black">
+              <option value="2">2</option>
+              <option value="4" selected>4</option>
+              <option value="8">8</option>
+              <option value="16">16</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      
+      <div id="beatTypeContent" class="tab-content">
+        <div class="grid grid-cols-2 gap-2">
+          <div id="beat4" class="beat-option active text-center">
+            <div class="text-xl md:text-2xl mb-1">4</div>
+            <div class="text-sm">4비트</div>
+          </div>
+          <div id="beat8" class="beat-option text-center">
+            <div class="text-xl md:text-2xl mb-1">8</div>
+            <div class="text-sm">8비트</div>
+          </div>
+          <div id="beat12" class="beat-option text-center">
+            <div class="text-xl md:text-2xl mb-1">12</div>
+            <div class="text-sm">12비트</div>
+          </div>
+          <div id="beat16" class="beat-option text-center">
+            <div class="text-xl md:text-2xl mb-1">16</div>
+            <div class="text-sm">16비트</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="mb-5 md:mb-6">
+      <label class="font-medium mb-2 block">소리 선택</label>
+      <div class="grid grid-cols-2 gap-2">
+        <div id="beep" class="sound-option active text-center">
+          <div class="text-xl md:text-2xl mb-1">🔊</div>
+          <div class="text-sm">삐 소리</div>
+        </div>
+        <div id="metronome" class="sound-option text-center">
+          <div class="text-xl md:text-2xl mb-1">🎵</div>
+          <div class="text-sm">메트로놈</div>
+        </div>
+        <div id="drumstick" class="sound-option text-center">
+          <div class="text-xl md:text-2xl mb-1">🥁</div>
+          <div class="text-sm">드럼 스틱</div>
+        </div>
+        <div id="hihat" class="sound-option text-center">
+          <div class="text-xl md:text-2xl mb-1">🎶</div>
+          <div class="text-sm">하이햇</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="mb-5 md:mb-6">
+      <div id="flashButton" class="flash-button">
+        <div class="flash-indicator"></div>
+        <span>플래시</span>
+        <span class="ml-auto text-sm opacity-70">꺼짐</span>
+      </div>
+    </div>
+    
+    <div class="flex">
+      <button id="startStop" class="w-full bg-white bg-opacity-20 hover:bg-opacity-30 active:bg-opacity-40 backdrop-blur-sm border border-white border-opacity-30 rounded-lg py-3 font-medium transition-all text-lg">
+        시작
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // 오디오 컨텍스트 초기화를 위한 사용자 상호작용 필요
+    let audioContextInitialized = false;
+    
+    const bpmSlider = document.getElementById('bpm');
+    const bpmInput = document.getElementById('bpmInput');
+    const beatsPerMeasureSelect = document.getElementById('beatsPerMeasure');
+    const beatUnitSelect = document.getElementById('beatUnit');
+    const beatsValue = document.getElementById('beatsValue');
+    const beatTypeValue = document.getElementById('beatTypeValue');
+    const startStopButton = document.getElementById('startStop');
+    const arm = document.getElementById('arm');
+    const beatIndicatorsContainer = document.getElementById('beatIndicators');
+    const flashButton = document.getElementById('flashButton');
+    const flashOverlay = document.getElementById('flashOverlay');
+    
+    // Tabs
+    const timeSignatureTab = document.getElementById('timeSignatureTab');
+    const beatTypeTab = document.getElementById('beatTypeTab');
+    const timeSignatureContent = document.getElementById('timeSignatureContent');
+    const beatTypeContent = document.getElementById('beatTypeContent');
+    
+    // Sound options
+    const soundOptions = {
+      beep: document.getElementById('beep'),
+      metronome: document.getElementById('metronome'),
+      drumstick: document.getElementById('drumstick'),
+      hihat: document.getElementById('hihat')
+    };
+    
+    // Beat options
+    const beatOptions = {
+      beat4: document.getElementById('beat4'),
+      beat8: document.getElementById('beat8'),
+      beat12: document.getElementById('beat12'),
+      beat16: document.getElementById('beat16')
+    };
+    
+    let isPlaying = false;
+    let audioContext = null;
+    let beatIndicators = [];
+    let currentSoundType = 'beep';
+    let currentBeatType = 4; // Default to 4 beats
+    let flashEnabled = false;
+    let metronomeInterval = null;
+    let animationFrameId = null;
+    let currentBeat = 0;
+    let currentSubBeat = 0;
+    let activeIndicator = null;
+    let startTime = 0;
+    let beatDuration = 500; // Default 120 BPM = 500ms per beat
+    let armDirection = 1; // 1 for right, -1 for left
+    let lastTickTime = 0;
+    let nextTickTime = 0;
+    
+    // 모바일 장치 감지
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    
+    // 모바일 장치에서 오디오 컨텍스트 초기화를 위한 이벤트 리스너
+    document.addEventListener('touchstart', initializeAudioContext, { once: true });
+    document.addEventListener('click', initializeAudioContext, { once: true });
+    
+    function initializeAudioContext() {
+      if (!audioContextInitialized) {
+        // 빈 오디오 컨텍스트 생성 및 시작
+        const tempContext = new (window.AudioContext || window.webkitAudioContext)();
+        const tempOscillator = tempContext.createOscillator();
+        const tempGain = tempContext.createGain();
+        tempGain.gain.value = 0; // 무음
+        tempOscillator.connect(tempGain);
+        tempGain.connect(tempContext.destination);
+        tempOscillator.start();
+        tempOscillator.stop(tempContext.currentTime + 0.001);
+        
+        audioContextInitialized = true;
+        console.log('Audio context initialized');
+      }
+    }
+    
+    // Tab switching
+    timeSignatureTab.addEventListener('click', () => {
+      timeSignatureTab.classList.add('border-b-2', 'border-white');
+      beatTypeTab.classList.remove('border-b-2', 'border-white');
+      timeSignatureContent.classList.add('active');
+      beatTypeContent.classList.remove('active');
+    });
+    
+    beatTypeTab.addEventListener('click', () => {
+      beatTypeTab.classList.add('border-b-2', 'border-white');
+      timeSignatureTab.classList.remove('border-b-2', 'border-white');
+      beatTypeContent.classList.add('active');
+      timeSignatureContent.classList.remove('active');
+    });
+    
+    // Toggle flash effect
+    flashButton.addEventListener('click', () => {
+      flashEnabled = !flashEnabled;
+      if (flashEnabled) {
+        flashButton.classList.add('active');
+        flashButton.querySelector('span:last-child').textContent = '켜짐';
+      } else {
+        flashButton.classList.remove('active');
+        flashButton.querySelector('span:last-child').textContent = '꺼짐';
+      }
+    });
+    
+    // Flash effect function
+    function triggerFlash() {
+      if (!flashEnabled) return;
+      
+      flashOverlay.style.opacity = '0.8';
+      setTimeout(() => {
+        flashOverlay.style.opacity = '0';
+      }, 100); // Flash duration - fast enough to be noticeable but not distracting
+    }
+    
+    // Initialize beat indicators
+    function updateBeatIndicators() {
+      beatIndicatorsContainer.innerHTML = '';
+      beatIndicators = [];
+      activeIndicator = null;
+      
+      const beatsPerMeasure = parseInt(beatsPerMeasureSelect.value);
+      const subBeatsPerBeat = currentBeatType / 4; // Calculate sub-beats based on beat type
+      const totalSubBeats = beatsPerMeasure * subBeatsPerBeat;
+      
+      // 모바일에서는 표시할 비트 수 제한
+      const maxVisibleBeats = isMobile && totalSubBeats > 16 ? 16 : totalSubBeats;
+      
+      for (let i = 0; i < maxVisibleBeats; i++) {
+        const indicator = document.createElement('div');
+        indicator.className = 'beat-indicator';
+        
+        // Mark main beats (first sub-beat of each beat)
+        if (i % subBeatsPerBeat === 0) {
+          indicator.classList.add('accent');
+        }
+        
+        beatIndicatorsContainer.appendChild(indicator);
+        beatIndicators.push(indicator);
+      }
+    }
+    
+    // Update beat indicator
+    function updateBeatIndicator() {
+      // Remove active class from previous indicator
+      if (activeIndicator) {
+        activeIndicator.classList.remove('active');
+      }
+      
+      // 모바일에서 표시되는 비트 수가 제한된 경우 계산
+      const beatsPerMeasure = parseInt(beatsPerMeasureSelect.value);
+      const subBeatsPerBeat = currentBeatType / 4;
+      const totalSubBeats = beatsPerMeasure * subBeatsPerBeat;
+      
+      if (beatIndicators.length < totalSubBeats) {
+        // 제한된 표시에서는 현재 비트를 모듈로 연산으로 계산
+        const visibleBeatIndex = currentSubBeat % beatIndicators.length;
+        activeIndicator = beatIndicators[visibleBeatIndex];
+      } else if (currentSubBeat < beatIndicators.length) {
+        activeIndicator = beatIndicators[currentSubBeat];
+      }
+      
+      if (activeIndicator) {
+        activeIndicator.classList.add('active');
+      }
+    }
+    
+    // Update time signature display
+    function updateTimeSignature() {
+      const beatsPerMeasure = beatsPerMeasureSelect.value;
+      const beatUnit = beatUnitSelect.value;
+      beatsValue.textContent = `${beatsPerMeasure}/${beatUnit}`;
+      updateBeatIndicators();
+      
+      // If metronome is playing, update it with new settings
+      if (isPlaying) {
+        resetMetronome();
+      }
+    }
+    
+    // Update beat type
+    function updateBeatType(type) {
+      currentBeatType = type;
+      beatTypeValue.textContent = `${type}비트`;
+      
+      // Update active class
+      Object.keys(beatOptions).forEach(key => {
+        beatOptions[key].classList.remove('active');
+      });
+      beatOptions[`beat${type}`].classList.add('active');
+      
+      updateBeatIndicators();
+      
+      // If metronome is playing, update it with new settings
+      if (isPlaying) {
+        resetMetronome();
+      }
+    }
+    
+    // Initialize audio context - only when needed
+    function initAudio() {
+      if (!audioContext) {
+        try {
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          console.log('Audio context created:', audioContext.state);
+          
+          // iOS에서는 resume이 필요할 수 있음
+          if (audioContext.state === 'suspended') {
+            audioContext.resume().then(() => {
+              console.log('Audio context resumed');
+            });
+          }
+        } catch (e) {
+          console.error('Failed to create audio context:', e);
+          alert('오디오를 재생할 수 없습니다. 브라우저 설정을 확인해주세요.');
+        }
+      } else if (audioContext.state === 'suspended') {
+        audioContext.resume().then(() => {
+          console.log('Audio context resumed');
+        });
+      }
+      return audioContext;
+    }
+    
+    // Play click sound based on selected sound type
+    function playClick(isAccented, isMainBeat) {
+      try {
+        const ctx = initAudio();
+        if (!ctx) return;
+        
+        const oscillator = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        
+        switch (currentSoundType) {
+          case 'beep':
+            if (isMainBeat && isAccented) {
+              oscillator.frequency.value = 1000;
+              gainNode.gain.value = 0.5;
+            } else if (isMainBeat) {
+              oscillator.frequency.value = 800;
+              gainNode.gain.value = 0.3;
+            } else {
+              oscillator.frequency.value = 600;
+              gainNode.gain.value = 0.15;
+            }
+            oscillator.type = 'sine';
+            break;
+            
+          case 'metronome':
+            if (isMainBeat && isAccented) {
+              oscillator.frequency.value = 1500;
+              gainNode.gain.value = 0.4;
+            } else if (isMainBeat) {
+              oscillator.frequency.value = 1200;
+              gainNode.gain.value = 0.25;
+            } else {
+              oscillator.frequency.value = 900;
+              gainNode.gain.value = 0.15;
+            }
+            oscillator.type = 'triangle';
+            break;
+            
+          case 'drumstick':
+            // Simulate drum stick sound with noise
+            if (isMainBeat && isAccented) {
+              oscillator.frequency.value = 300;
+              gainNode.gain.value = 0.7;
+            } else if (isMainBeat) {
+              oscillator.frequency.value = 200;
+              gainNode.gain.value = 0.5;
+            } else {
+              oscillator.frequency.value = 150;
+              gainNode.gain.value = 0.3;
+            }
+            oscillator.type = 'square';
+            
+            // Add quick decay for drum-like sound
+            gainNode.gain.setValueAtTime(gainNode.gain.value, ctx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
+            break;
+            
+          case 'hihat':
+            // Simulate hi-hat with filtered noise
+            if (isMainBeat && isAccented) {
+              oscillator.frequency.value = 8000;
+              gainNode.gain.value = 0.3;
+            } else if (isMainBeat) {
+              oscillator.frequency.value = 6000;
+              gainNode.gain.value = 0.2;
+            } else {
+              oscillator.frequency.value = 5000;
+              gainNode.gain.value = 0.1;
+            }
+            oscillator.type = 'square';
+            
+            // Add very quick decay for hi-hat-like sound
+            gainNode.gain.setValueAtTime(gainNode.gain.value, ctx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.05);
+            
+            // Add filter for hi-hat sound
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'highpass';
+            filter.frequency.value = 5000;
+            oscillator.connect(filter);
+            filter.connect(gainNode);
+            break;
+        }
+        
+        oscillator.start();
+        oscillator.stop(ctx.currentTime + 0.1);
+        
+        // Trigger flash on main beats
+        if (isMainBeat && flashEnabled) {
+          triggerFlash();
+        }
+        
+        // Toggle arm direction on main beats
+        if (isMainBeat) {
+          armDirection = -armDirection;
+          startArmAnimation();
+        }
+      } catch (e) {
+        console.error('Error playing sound:', e);
+      }
+    }
+    
+    // Calculate beat duration based on BPM
+    function calculateBeatDuration() {
+      const bpm = parseInt(bpmSlider.value);
+      return 60000 / bpm; // Duration in milliseconds
+    }
+    
+    // Start arm animation
+    function startArmAnimation() {
+      // Cancel any existing animation
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+      
+      const startAngle = armDirection === 1 ? -30 : 30;
+      const endAngle = armDirection === 1 ? 30 : -30;
+      const startTime = performance.now();
+      const duration = beatDuration; // One full beat duration
+      
+      function animateFrame(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // Use easeInOutQuad for smooth acceleration/deceleration
+        let easedProgress;
+        if (progress < 0.5) {
+          easedProgress = 2 * progress * progress;
+        } else {
+          easedProgress = 1 - Math.pow(-2 * progress + 2, 2) / 2;
+        }
+        
+        const currentAngle = startAngle + (endAngle - startAngle) * easedProgress;
+        arm.style.transform = `rotate(${currentAngle}deg)`;
+        
+        if (progress < 1 && isPlaying) {
+          animationFrameId = requestAnimationFrame(animateFrame);
+        }
+      }
+      
+      animationFrameId = requestAnimationFrame(animateFrame);
+    }
+    
+    // 고정 간격 대신 정확한 타이밍을 위한 스케줄러
+    function scheduleNextTick() {
+      const now = performance.now();
+      const bpm = parseInt(bpmSlider.value);
+      const subBeatsPerBeat = currentBeatType / 4;
+      
+      // 서브비트 간격 계산 (밀리초)
+      const subBeatInterval = 60000 / (bpm * subBeatsPerBeat);
+      
+      // 다음 틱 시간 계산
+      nextTickTime = Math.max(now, nextTickTime + subBeatInterval);
+      
+      // 다음 틱까지 대기
+      const timeUntilNextTick = nextTickTime - now;
+      
+      // 타이머 설정
+      return setTimeout(() => {
+        const actualTime = performance.now();
+        const drift = actualTime - nextTickTime;
+        
+        // 틱 실행
+        tick();
+        
+        // 다음 틱 예약
+        if (isPlaying) {
+          metronomeInterval = scheduleNextTick();
+        }
+        
+        // 드리프트가 너무 크면 재조정
+        if (Math.abs(drift) > 20) {
+          nextTickTime = actualTime;
+        }
+      }, timeUntilNextTick);
+    }
+    
+    // Start metronome
+    function startMetronome() {
+      try {
+        initAudio();
+        
+        // Reset counters
+        currentBeat = 0;
+        currentSubBeat = 0;
+        armDirection = 1; // Start with right direction
+        
+        // Calculate beat duration
+        beatDuration = calculateBeatDuration();
+        
+        // Set start time
+        startTime = performance.now();
+        nextTickTime = startTime;
+        
+        // Play first tick immediately
+        tick();
+        
+        // Schedule next ticks
+        metronomeInterval = scheduleNextTick();
+        
+        // Update UI
+        startStopButton.textContent = '정지';
+        isPlaying = true;
+      } catch (e) {
+        console.error('Error starting metronome:', e);
+        alert('메트로놈을 시작할 수 없습니다. 브라우저 설정을 확인해주세요.');
+      }
+    }
+    
+    // Process a single tick of the metronome
+    function tick() {
+      const beatsPerMeasure = parseInt(beatsPerMeasureSelect.value);
+      const subBeatsPerBeat = currentBeatType / 4;
+      const totalSubBeats = beatsPerMeasure * subBeatsPerBeat;
+      
+      // Determine if this is a main beat (first sub-beat of a beat)
+      const isMainBeat = currentSubBeat % subBeatsPerBeat === 0;
+      
+      // Determine if this is the first beat of a measure
+      const isFirstBeat = currentSubBeat === 0;
+      
+      // Play click sound
+      playClick(isFirstBeat, isMainBeat);
+      
+      // Update beat indicator
+      updateBeatIndicator();
+      
+      // Increment beat counter
+      currentSubBeat = (currentSubBeat + 1) % totalSubBeats;
+    }
+    
+    // Stop metronome
+    function stopMetronome() {
+      // Clear interval
+      if (metronomeInterval) {
+        clearTimeout(metronomeInterval);
+        metronomeInterval = null;
+      }
+      
+      // Stop animation
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
+      
+      // Reset arm position
+      arm.style.transform = 'rotate(0deg)';
+      
+      // Reset beat indicators
+      if (activeIndicator) {
+        activeIndicator.classList.remove('active');
+        activeIndicator = null;
+      }
+      
+      // Update UI
+      startStopButton.textContent = '시작';
+      isPlaying = false;
+    }
+    
+    // Reset and restart metronome with new settings
+    function resetMetronome() {
+      stopMetronome();
+      startMetronome();
+    }
+    
+    // Start or stop the metronome
+    function toggleMetronome() {
+      if (isPlaying) {
+        stopMetronome();
+      } else {
+        startMetronome();
+      }
+    }
+    
+    // Update BPM display and slider background
+    function updateBPM() {
+      const value = bpmSlider.value;
+      bpmInput.value = value;
+      
+      // Update slider background
+      const percent = ((value - bpmSlider.min) / (bpmSlider.max - bpmSlider.min)) * 100;
+      bpmSlider.style.background = `linear-gradient(to right, #ff4757 0%, #ff4757 ${percent}%, #dfe4ea ${percent}%, #dfe4ea 100%)`;
+      
+      // Update beat duration
+      beatDuration = calculateBeatDuration();
+      
+      // If metronome is playing, update it with new BPM
+      if (isPlaying) {
+        resetMetronome();
+      }
+    }
+    
+    // Update BPM from input field
+    function updateBPMFromInput() {
+      let value = parseInt(bpmInput.value);
+      
+      // Ensure value is within range
+      if (isNaN(value) || value < 1) {
+        value = 1;
+      } else if (value > 400) {
+        value = 400;
+      }
+      
+      // Update input and slider
+      bpmInput.value = value;
+      bpmSlider.value = value;
+      
+      // Update slider background
+      const percent = ((value - bpmSlider.min) / (bpmSlider.max - bpmSlider.min)) * 100;
+      bpmSlider.style.background = `linear-gradient(to right, #ff4757 0%, #ff4757 ${percent}%, #dfe4ea ${percent}%, #dfe4ea 100%)`;
+      
+      // Update beat duration
+      beatDuration = calculateBeatDuration();
+      
+      // If metronome is playing, update it with new BPM
+      if (isPlaying) {
+        resetMetronome();
+      }
+    }
+    
+    // Change sound type
+    function changeSoundType(type) {
+      currentSoundType = type;
+      
+      // Update active class
+      Object.keys(soundOptions).forEach(key => {
+        soundOptions[key].classList.remove('active');
+      });
+      soundOptions[type].classList.add('active');
+      
+      // Play a sample sound
+      playClick(true, true);
+    }
+    
+    // Handle visibility change (tab switching)
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        // Browser tab is hidden
+        if (isPlaying && audioContext) {
+          audioContext.suspend();
+          
+          // Stop animation when tab is hidden
+          if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+          }
+          
+          // Clear interval
+          if (metronomeInterval) {
+            clearTimeout(metronomeInterval);
+            metronomeInterval = null;
+          }
+        }
+      } else {
+        // Browser tab is visible again
+        if (isPlaying && audioContext && audioContext.state === 'suspended') {
+          audioContext.resume().then(() => {
+            // Reset timing to avoid jumps
+            resetMetronome();
+          });
+        }
+      }
+    });
+    
+    // iOS에서 오디오 재생을 위한 특별 처리
+    function unlockAudioForIOS() {
+      if (audioContext && audioContext.state === 'suspended') {
+        const unlockBuffer = audioContext.createBuffer(1, 1, 22050);
+        const unlockSource = audioContext.createBufferSource();
+        unlockSource.buffer = unlockBuffer;
+        unlockSource.connect(audioContext.destination);
+        unlockSource.start(0);
+        unlockSource.onended = function() {
+          unlockSource.disconnect(0);
+          console.log('Audio unlocked for iOS');
+        };
+      }
+    }
+    
+    // 모바일 장치에서 터치 이벤트 처리
+    if (isMobile) {
+      document.addEventListener('touchstart', unlockAudioForIOS, { once: true });
+    }
+    
+    // 모바일에서 더블탭 줌 방지
+    document.addEventListener('dblclick', function(e) {
+      e.preventDefault();
+    }, { passive: false });
+    
+    // Event listeners
+    bpmSlider.addEventListener('input', updateBPM);
+    bpmInput.addEventListener('input', updateBPMFromInput);
+    bpmInput.addEventListener('change', updateBPMFromInput);
+    bpmInput.addEventListener('blur', updateBPMFromInput);
+    
+    beatsPerMeasureSelect.addEventListener('change', updateTimeSignature);
+    beatUnitSelect.addEventListener('change', updateTimeSignature);
+    startStopButton.addEventListener('click', toggleMetronome);
+    
+    // Sound option event listeners
+    Object.keys(soundOptions).forEach(key => {
+      soundOptions[key].addEventListener('click', () => changeSoundType(key));
+      // 모바일에서 터치 이벤트 추가
+      if (isMobile) {
+        soundOptions[key].addEventListener('touchend', (e) => {
+          e.preventDefault();
+          changeSoundType(key);
+        });
+      }
+    });
+    
+    // Beat option event listeners
+    beatOptions.beat4.addEventListener('click', () => updateBeatType(4));
+    beatOptions.beat8.addEventListener('click', () => updateBeatType(8));
+    beatOptions.beat12.addEventListener('click', () => updateBeatType(12));
+    beatOptions.beat16.addEventListener('click', () => updateBeatType(16));
+    
+    // 모바일에서 터치 이벤트 추가
+    if (isMobile) {
+      beatOptions.beat4.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        updateBeatType(4);
+      });
+      beatOptions.beat8.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        updateBeatType(8);
+      });
+      beatOptions.beat12.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        updateBeatType(12);
+      });
+      beatOptions.beat16.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        updateBeatType(16);
+      });
+      
+      flashButton.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        flashButton.click();
+      });
+      
+      startStopButton.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        toggleMetronome();
+      });
+    }
+    
+    // Initialize
+    updateBPM();
+    updateTimeSignature();
+    
+    // 페이지 로드 시 iOS 오디오 초기화
+    window.addEventListener('load', function() {
+      // iOS에서는 사용자 제스처가 필요하므로 시작 버튼에 이벤트 리스너 추가
+      startStopButton.addEventListener('click', unlockAudioForIOS, { once: true });
+    });
+  </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'944282041560c43f',t:'MTc0Nzk4MTg2MC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
